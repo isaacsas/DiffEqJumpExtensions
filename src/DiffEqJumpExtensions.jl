@@ -7,6 +7,8 @@ import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
 
 include("aggregators/aggregators.jl")
+include("aggregators/direct2.jl")
+include("aggregators/directvec.jl")
 include("aggregators/frm.jl")
 include("aggregators/frmvec.jl")
 include("problem.jl")
@@ -14,7 +16,7 @@ include("SSA_stepper.jl")
 
 export JumpProblem
 
-export FRM, FRMVEC
+export FRM, FRMVEC, Direct2, DirectVEC
 
 
 end # module
