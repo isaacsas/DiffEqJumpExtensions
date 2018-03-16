@@ -4,7 +4,8 @@ using BenchmarkTools
 using BioSimulator
 
 # DiffEqJump methods to benchmark
-methods = (Direct2(), DirectVEC(), DiffEqJumpExtensions.FRM(), FRMVEC())
+#methods = (Direct2(), DirectVEC(), DiffEqJumpExtensions.FRM(), FRMVEC())
+methods = (DirectVEC(), FRMVEC())
 
 # number of save times to look at
 num_save_vec = 25000 #10.^(3:6)
