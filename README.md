@@ -1,1 +1,3 @@
 # DiffEqJumpExtensions
+
+extensions to DiffEqJump
