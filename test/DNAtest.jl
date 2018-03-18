@@ -1,4 +1,5 @@
 using DiffEqBase, OrdinaryDiffEq, DiffEqJump, DiffEqBiological
+using StaticArrays, DataStructures
 using DiffEqJumpExtensions
 using Plots; pyplot()
 using BenchmarkTools
@@ -34,8 +35,29 @@ model <= Reaction("DNA repression", .025, "DNA + P --> DNAR")
 model <= Reaction("DNA freedom", 1., "DNAR --> DNA + P")
 
 
+spec = OrderedDict( :DNA => 1, :mRNA => 2, :P => 3, :DNAR => 4)
+scaled_rates = [rate for rate in params]
+reactant_stoch = [
+    SMatrix{2,1}([spec[:DNA] 1]),
+    SMatrix{2,1}([spec[:mRNA] 1]),
+    SMatrix{2,1}([spec[:mRNA] 1]),
+    SMatrix{2,1}([spec[:P] 1]),
+    SMatrix{2,2}([spec[:DNA] spec[:P]; 1 1]),
+    SMatrix{2,1}([spec[:DNAR] 1])
+    ]
+net_stoch = [
+       SMatrix{2,1}([spec[:mRNA] 1]'),
+       SMatrix{2,1}([spec[:P] 1]'),
+       SMatrix{2,1}([spec[:mRNA] -1]'),
+       SMatrix{2,1}([spec[:P] -1]'),
+       SMatrix{2,3}([spec[:DNA] spec[:P] spec[:DNAR]; -1 -1 1]),
+       SMatrix{2,3}([spec[:DNA] spec[:P] spec[:DNAR]; 1 1 -1]) 
+       ]
+
+
 # DiffEqJump methods to benchmark
-methods = (Direct2(), DirectVEC(), DiffEqJumpExtensions.FRM(), FRMVEC())
+#methods = (Direct2(), DirectVEC(), DiffEqJumpExtensions.FRM(), FRMVEC())
+methods = (DirectVEC(), DirectMA(scaled_rates, reactant_stoch, net_stoch))
 
 # plotting solutions
 if doPlot
