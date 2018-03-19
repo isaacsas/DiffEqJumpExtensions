@@ -3,10 +3,6 @@ using DiffEqJumpExtensions
 using BenchmarkTools
 using BioSimulator
 
-# DiffEqJump methods to benchmark
-#methods = (Direct2(), DirectVEC(), DiffEqJumpExtensions.FRM(), FRMVEC())
-#methods = (DirectVEC(), FRMVEC())
-methods = (DirectVEC(),)
 
 # number of save times to look at
 num_save_vec = 25000 #10.^(3:6)
@@ -21,19 +17,43 @@ end
 diffnetwork *= "end K"
 #println(diffnetwork)
 rs = eval( parse(diffnetwork) )
-tf = 20.
+tf = 200.
 params = (1.,)
-prob   = DiscreteProblem(10*ones(N), (0.0, tf), params)
+prob   = DiscreteProblem(10*ones(Int64,N), (0.0, tf), params)
 
 # Biosimlator model of the same network
 model = Network("Diffusion")
 for i in 1:N
-    model <= Species("X$(i)")
+    model <= Species("X$(i)", 10)
 end
 for i in 1:(N-1)
     model <= Reaction("diffusion$(i)a", params[1], "X$(i) --> X$(i+1)")
     model <= Reaction("diffusion$(i)b", params[1], "X$(i+1) --> X$(i)")
 end
+
+# mass action version
+scaled_rates   = ones(Float64,2*(N-1))
+reactant_stoch = Vector{Vector{Pair{Int64,Int64}}}();
+net_stoch      = Vector{Vector{Pair{Int64,Int64}}}();
+for i = 1:(N-1)
+    push!(reactant_stoch, [i => 1])
+    push!(reactant_stoch, [(i+1) => 1])
+    push!(net_stoch, [i => -1, (i+1) => 1])
+    push!(net_stoch, [(i+1) => -1, i => 1])
+end
+# reactant_stoch = Vector{Array{Int64,2}}();
+# net_stoch      = Vector{Array{Int64,2}}();
+# for i = 1:(N-1)
+#     push!(reactant_stoch, [i,1]')
+#     push!(reactant_stoch, [(i+1),1]')
+#     push!(net_stoch, [i (i+1); -1 1])
+#     push!(net_stoch, [(i+1) i; -1  1])
+# end
+
+# DiffEqJump methods to benchmark
+#methods = (Direct2(), DirectVEC(), DiffEqJumpExtensions.FRM(), FRMVEC())
+#methods = (DirectVEC(), FRMVEC())
+methods = (DirectMA(scaled_rates, reactant_stoch, net_stoch), DirectVEC())
 
 
 # exact methods

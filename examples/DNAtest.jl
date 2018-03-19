@@ -70,6 +70,7 @@ scaled_rates = [rate for rate in params]
          [spec[:DNA] => 1, spec[:P] => 1, spec[:DNAR] => -1] 
          ]
 
+# vectors of SMatrices seem to be really slow here...         
 # reactant_stoch = [
 #     SMatrix{2,1}([spec[:DNA] 1]),
 #     SMatrix{2,1}([spec[:mRNA] 1]),

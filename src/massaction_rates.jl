@@ -26,23 +26,23 @@ end
 
 
 
-@inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst, 
+@inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst,
                                         stochmat::AbstractVector{Pair{T,T}}) where T
     val = one(T)
-    
+
     for specstoch in stochmat
         specpop = speciesvec[specstoch[1]]
-        val    *= specpop        
+        val    *= specpop
         for k = 2:specstoch[2]
             specpop -= one(specpop)
             val     *= specpop
-        end        
+        end
     end
 
     return rateconst * val
 end
 
-@inline @inbounds @fastmath function executerx!(speciesvec::AbstractVector{T}, 
+@inline @inbounds @fastmath function executerx!(speciesvec::AbstractVector{T},
                                                 net_stoch::AbstractVector{Pair{T,T}}) where T
     for specstoch in net_stoch
         speciesvec[specstoch[1]] += specstoch[2]
