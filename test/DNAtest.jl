@@ -37,22 +37,39 @@ model <= Reaction("DNA freedom", 1., "DNAR --> DNA + P")
 
 spec = OrderedDict( :DNA => 1, :mRNA => 2, :P => 3, :DNAR => 4)
 scaled_rates = [rate for rate in params]
-reactant_stoch = [
-   [spec[:DNA] 1]',
-   [spec[:mRNA] 1]',
-   [spec[:mRNA] 1]',
-   [spec[:P] 1]',
-   [spec[:DNA] spec[:P]; 1 1],
-   [spec[:DNAR] 1]'
-   ]
-net_stoch = [
-    [spec[:mRNA] 1]',
-    [spec[:P] 1]',
-    [spec[:mRNA] -1]',
-    [spec[:P] -1]',
-    [spec[:DNA] spec[:P] spec[:DNAR]; -1 -1 1],
-    [spec[:DNA] spec[:P] spec[:DNAR]; 1 1 -1] 
-    ]
+# reactant_stoch = [
+#    [spec[:DNA] 1]',
+#    [spec[:mRNA] 1]',
+#    [spec[:mRNA] 1]',
+#    [spec[:P] 1]',
+#    [spec[:DNA] spec[:P]; 1 1],
+#    [spec[:DNAR] 1]'
+#    ]
+# net_stoch = [
+#     [spec[:mRNA] 1]',
+#     [spec[:P] 1]',
+#     [spec[:mRNA] -1]',
+#     [spec[:P] -1]',
+#     [spec[:DNA] spec[:P] spec[:DNAR]; -1 -1 1],
+#     [spec[:DNA] spec[:P] spec[:DNAR]; 1 1 -1] 
+#     ]
+    reactant_stoch = [
+        [spec[:DNA] => 1],
+        [spec[:mRNA] => 1],
+        [spec[:mRNA] => 1],
+        [spec[:P] => 1],
+        [spec[:DNA] => 1, spec[:P] => 1],
+        [spec[:DNAR] => 1]
+        ]
+     net_stoch = [
+         [spec[:mRNA] => 1],
+         [spec[:P] => 1],
+         [spec[:mRNA] => -1],
+         [spec[:P] => -1],
+         [spec[:DNA] => -1, spec[:P] => -1, spec[:DNAR] => 1],
+         [spec[:DNA] => 1, spec[:P] => 1, spec[:DNAR] => -1] 
+         ]
+
 # reactant_stoch = [
 #     SMatrix{2,1}([spec[:DNA] 1]),
 #     SMatrix{2,1}([spec[:mRNA] 1]),
@@ -62,10 +79,10 @@ net_stoch = [
 #     SMatrix{2,1}([spec[:DNAR] 1])
 #     ]
 # net_stoch = [
-#        SMatrix{2,1}([spec[:mRNA] 1]'),
-#        SMatrix{2,1}([spec[:P] 1]'),
-#        SMatrix{2,1}([spec[:mRNA] -1]'),
-#        SMatrix{2,1}([spec[:P] -1]'),
+#        SMatrix{2,1}([spec[:mRNA] 1]),
+#        SMatrix{2,1}([spec[:P] 1]),
+#        SMatrix{2,1}([spec[:mRNA] -1]),
+#        SMatrix{2,1}([spec[:P] -1]),
 #        SMatrix{2,3}([spec[:DNA] spec[:P] spec[:DNAR]; -1 -1 1]),
 #        SMatrix{2,3}([spec[:DNA] spec[:P] spec[:DNAR]; 1 1 -1]) 
 #        ]
