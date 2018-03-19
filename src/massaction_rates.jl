@@ -1,23 +1,25 @@
 
-@inbounds @fastmath function evalrxrate(speciesvec, rxidx, rateconstvec, stochmatvec)
-    val      = rateconstvec[rxidx]  
-    const stochmat = stochmatvec[rxidx]  
-    for i = 1:2:length(stochmat)
-        const specpop = speciesvec[stochmat[i]]
+@inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst, stochmat::AbstractArray{T,2}) where T
+    val = one(T)
+
+    i = 1
+    while i < (length(stochmat))
+        specpop = speciesvec[stochmat[i]]
         val    *= specpop
-        for k = 2:stochmat[i+1]
-            val *= (specpop - k + 1)
+        i      += 1
+        for k = 2:stochmat[i]
+            specpop -= one(specpop)
+            val     *= specpop
         end
+        i += 1
     end
 
-    val
+    return rateconst * val
 end
 
-@inbounds @fastmath function executerx!(speciesvec, rxidx, net_stochvec)
-    const net_stoch = net_stochvec[rxidx]
+@inline @inbounds @fastmath function executerx!(speciesvec::AbstractVector{T}, net_stoch::AbstractArray{T,2}) where T
     for i = 1:2:length(net_stoch)
         speciesvec[net_stoch[i]] += net_stoch[i+1]
     end
-    nothing 
+    nothing
 end
-

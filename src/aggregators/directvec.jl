@@ -19,7 +19,7 @@ function (p::DirectVECJumpAggregation)(integrator) # affect!
   i       = searchsortedfirst(p.cur_rates, rng_val)
   @inbounds p.affects![i](integrator)
   p.sum_rate,ttnj = time_to_next_jump_ptr(integrator.u,integrator.p,integrator.t,p.rates,p.cur_rates)
-  p.next_jump     = integrator.t + ttnj
+  @fastmath p.next_jump = integrator.t + ttnj
   if p.next_jump < p.end_time
     add_tstop!(integrator,p.next_jump)
   end
@@ -36,7 +36,7 @@ function (p::DirectVECJumpAggregation)(dj,u,t,integrator) # initialize
     nothing
 end
 
-function time_to_next_jump_ptr(u,p,t,rates,cur_rates)
+@fastmath function time_to_next_jump_ptr(u,p,t,rates,cur_rates)
     @inbounds cur_rates[1] = rates[1](u,p,t)
     @inbounds sum_rate     = cur_rates[1]
     @inbounds for i in 2:length(cur_rates)
