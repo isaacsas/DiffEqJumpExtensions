@@ -6,6 +6,7 @@ using DiffEqJump, DiffEqBiological
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
 
+include("jumps.jl")
 include("aggregators/aggregators.jl")
 include("aggregators/direct2.jl")
 include("aggregators/directvec.jl")

@@ -1,4 +1,3 @@
-using FunctionWrappers
 
 mutable struct DirectMAJumpAggregation{T,S1,S2,F1,F2} <: AbstractJumpAggregator
     next_jump::T
@@ -38,26 +37,48 @@ function (p::DirectMAJumpAggregation)(dj,u,t,integrator) # initialize
 end
 
 @fastmath function time_to_next_jump_ma(u,p,t,aggregator::DirectMA,cur_rates)
-    @inbounds sum_rate     = evalrxrate(u, aggregator.scaled_rates[1], aggregator.reactant_stoch[1])
-    @inbounds cur_rates[1] = sum_rate
-    @inbounds for i in 2:length(cur_rates)
+    sum_rate  = zero(t)
+    prev_rate = zero(t)
+    new_rate  = zero(t)
+    @inbounds for i in 1:length(aggregator.scaled_rates)        
         new_rate     = evalrxrate(u, aggregator.scaled_rates[i], aggregator.reactant_stoch[i])
         sum_rate    += new_rate
-        cur_rates[i] = new_rate + cur_rates[i-1]
+        cur_rates[i] = new_rate + prev_rate
+        prev_rate    = cur_rates[i]
     end
+
+    # @inbounds sum_rate     = evalrxrate(u, aggregator.scaled_rates[1], aggregator.reactant_stoch[1])
+    # @inbounds cur_rates[1] = sum_rate
+    # @inbounds for i in 2:length(cur_rates)
+    #     new_rate     = evalrxrate(u, aggregator.scaled_rates[i], aggregator.reactant_stoch[i])
+    #     sum_rate    += new_rate
+    #     cur_rates[i] = new_rate + cur_rates[i-1]
+    # end
 
     sum_rate,randexp()/sum_rate
 end
 
 @inline function aggregate(aggregator::DirectMA,u,p,t,end_time,constant_jumps,save_positions)
-    # RateWrapper        = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
-    # rates              = [RateWrapper(c.rate) for c in constant_jumps]
-    # AffectWrapper      = FunctionWrappers.FunctionWrapper{Void,Tuple{Any}}
-    # affects!           = [AffectWrapper(x->(c.affect!(x);nothing)) for c in constant_jumps]
-    rates = [evalrxrate]
-    affects! = [executerx!]
-    cur_rates          = Vector{typeof(t)}(length(aggregator.scaled_rates))
+
+    # handle constant jumps
+    if constant_jumps != nothing
+        if length(constant_jumps) < TUPLE_TO_FWRAPPER_CUTOFF
+            rates,affects! = getRatesAffectsAsTuples(constant_jumps)
+        else
+            rates,affects! = getRatesAffectsAsFWrappers(u,p,t,constant_jumps)
+        end
+    else
+        rates    = ()
+        affects! = ()
+    end
+    
+    # current jump rates, includes constant jumps and mass action jumps
+    cur_rates = Vector{typeof(t)}(length(aggregator.scaled_rates))
+    #cur_rates = Vector{typeof(t)}(length(aggregator.scaled_rates) + length(rates))
+
+    # get first jump time and jump
     sum_rate,next_jump = time_to_next_jump_ma(u,p,t,aggregator,cur_rates)
+
     DirectMAJumpAggregation(next_jump, end_time, cur_rates, sum_rate, aggregator,
                             rates, affects!, save_positions)
 end
