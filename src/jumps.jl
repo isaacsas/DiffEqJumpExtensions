@@ -1,5 +1,5 @@
 # when to switch aggregators from tuples for rates/affects to FunctionWrappers
-const TUPLE_TO_FWRAPPER_CUTOFF = 11
+const TUPLE_TO_FWRAPPER_CUTOFF = 10
 
 function getRatesAffectsAsTuples(constant_jumps)
     rates    = (c.rate for c in constant_jumps)

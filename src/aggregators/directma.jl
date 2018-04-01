@@ -42,7 +42,7 @@ end
     new_rate  = zero(t)
     @inbounds for i in 1:length(aggregator.scaled_rates)        
         new_rate     = evalrxrate(u, aggregator.scaled_rates[i], aggregator.reactant_stoch[i])
-        sum_rate    += new_rate
+        sum_rate     = sum_rate + new_rate
         cur_rates[i] = new_rate + prev_rate
         prev_rate    = cur_rates[i]
     end
