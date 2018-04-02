@@ -1,5 +1,9 @@
+###############################################################################
+# below stochiometry for a given reaction is a 2xk matrix with each column 
+# giving species id and stochiometric coefficient
 
-@inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst, stochmat::AbstractArray{T,2}) where T
+@inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst, 
+                                        stochmat::AbstractArray{T,2}) where T
     val = one(T)
 
     i = 1
@@ -17,7 +21,8 @@
     return rateconst * val
 end
 
-@inline @inbounds @fastmath function executerx!(speciesvec::AbstractVector{T}, net_stoch::AbstractArray{T,2}) where T
+@inline @inbounds @fastmath function executerx!(speciesvec::AbstractVector{T}, 
+                                                net_stoch::AbstractArray{T,2}) where T
     for i = 1:2:length(net_stoch)
         speciesvec[net_stoch[i]] += net_stoch[i+1]
     end
@@ -25,7 +30,9 @@ end
 end
 
 
-
+###############################################################################
+# below stochiometry for a given reaction is a vector of pairs mapping species 
+# id to stochiometric coefficient
 @inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst,
                                         stochmat::AbstractVector{Pair{T,T}}) where T
     val = one(T)
@@ -48,4 +55,15 @@ end
         speciesvec[specstoch[1]] += specstoch[2]
     end
     nothing
+end
+
+
+@inbounds function scalerates!(unscaled_rates, stochmat::Vector{Vector{Pair{T,T}}}) where T
+    for i in eachindex(unscaled_rates)
+        coef = one(T)
+        for specstoch in stochmat[i]
+            coef *= factorial(specstoch[2])
+        end
+        unscaled_rates[i] /= coef
+    end
 end
