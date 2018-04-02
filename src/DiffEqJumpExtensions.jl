@@ -1,25 +1,21 @@
 module DiffEqJumpExtensions
 
 using DiffEqBase, Compat, Requires
-using DiffEqJump, DiffEqBiological
+using DiffEqJump
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
 
+include("massaction_rates.jl")
 include("jumps.jl")
 include("aggregators/aggregators.jl")
-include("aggregators/direct2.jl")
-include("aggregators/directvec.jl")
+include("aggregators/direct.jl")
 include("aggregators/directma.jl")
-include("aggregators/frm.jl")
-include("aggregators/frmvec.jl")
-include("problem.jl")
-include("SSA_stepper.jl")
-include("massaction_rates.jl")
+
 
 export JumpProblem
 
-export FRM, FRMVEC, Direct2, DirectVEC, DirectMA
+export DirectMA
 
 
 end # module

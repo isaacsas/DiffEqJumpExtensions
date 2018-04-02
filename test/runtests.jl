@@ -2,4 +2,6 @@ using DiffEqJumpExtensions
 using Base.Test
 
 # write your own tests here
-@test 1 == 2
+tic()
+@time @testset "Functionwrapper tests" begin include("functwrapper_tests.jl") end
+toc()
