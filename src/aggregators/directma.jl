@@ -1,86 +1,77 @@
 
-mutable struct DirectMAJumpAggregation{T,S1,S2,F1,F2} <: AbstractJumpAggregator
-    next_jump::T
+mutable struct DirectMAJumpAggregation{T,S,F1,F2} <: AbstractJumpAggregator
+    next_jump_time::T
+    next_jump::Int64
     end_time::T
     cur_rates::Vector{T}
     sum_rate::T
-    aggregator::DirectMA{S1,S2}
+    ma_jumps::S
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool,Bool}
 end
 
 @inline function (p::DirectMAJumpAggregation)(u,t,integrator) # condition
-    p.next_jump==t
+    p.next_jump_time == t
 end
 
 function (p::DirectMAJumpAggregation)(integrator) # affect!
-    rng_val = rand() * p.sum_rate
-    i       = searchsortedfirst(p.cur_rates, rng_val)
-    @inbounds executerx!(integrator.u, p.aggregator.net_stoch[i])
-    p.sum_rate,ttnj = time_to_next_jump_ma(integrator.u,integrator.p,integrator.t,p.aggregator,p.cur_rates)
-    @fastmath p.next_jump = integrator.t + ttnj
-    if p.next_jump < p.end_time
-        add_tstop!(integrator,p.next_jump)
-    end
+    @inbounds executerx!(integrator.u, p.ma_jumps.net_stoch[p.next_jump])
+    update_samples(p, integrator, integrator.u, integrator.p, integrator.t)
     nothing
 end
 
 function (p::DirectMAJumpAggregation)(dj,u,t,integrator) # initialize
-    sum_rate,next_jump = time_to_next_jump_ma(u,integrator.p,t,p.aggregator,p.cur_rates)
-    p.sum_rate         = sum_rate
-    p.next_jump        = t + next_jump
-    if p.next_jump < p.end_time
-        add_tstop!(integrator,p.next_jump)
-    end
+    update_samples(p, integrator, u, integrator.p, t)
     nothing
 end
 
-@fastmath function time_to_next_jump_ma(u,p,t,aggregator::DirectMA,cur_rates)
-    sum_rate  = zero(t)
+################ DirectMassAction specific implementation functions
+function update_samples(p::DirectMAJumpAggregation, integrator, u, params, t)
+    
+    # next jump time
+    p.sum_rate, ttnj = time_to_next_jump_ma(u, params, t, p.ma_jumps, p.cur_rates)
+    
+    # add jump event to event queue
+    @fastmath p.next_jump_time = t + ttnj    
+    if p.next_jump_time < p.end_time
+        add_tstop!(integrator, p.next_jump_time)
+    end
+
+    # next jump 
+    rn = rand() * p.sum_rate
+    @inbounds p.next_jump = searchsortedfirst(p.cur_rates, rn) 
+end
+
+@fastmath function time_to_next_jump_ma(u, params, t, majumps::MassActionJump, cur_rates)
     prev_rate = zero(t)
     new_rate  = zero(t)
-    @inbounds for i in 1:length(aggregator.scaled_rates)        
-        new_rate     = evalrxrate(u, aggregator.scaled_rates[i], aggregator.reactant_stoch[i])
-        sum_rate     = sum_rate + new_rate
+    @inbounds for i in 1:length(majumps.scaled_rates)        
+        new_rate     = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
         cur_rates[i] = new_rate + prev_rate
         prev_rate    = cur_rates[i]
     end
 
-    # @inbounds sum_rate     = evalrxrate(u, aggregator.scaled_rates[1], aggregator.reactant_stoch[1])
-    # @inbounds cur_rates[1] = sum_rate
-    # @inbounds for i in 2:length(cur_rates)
-    #     new_rate     = evalrxrate(u, aggregator.scaled_rates[i], aggregator.reactant_stoch[i])
-    #     sum_rate    += new_rate
-    #     cur_rates[i] = new_rate + cur_rates[i-1]
-    # end
-
-    sum_rate,randexp()/sum_rate
+    @inbounds sum_rate = cur_rates[end]
+    sum_rate, randexp()/sum_rate
 end
 
-@inline function aggregate(aggregator::DirectMA,u,p,t,end_time,constant_jumps,save_positions)
+@inline function aggregate(aggregator::DirectMassAction, u, p, t, end_time,
+                            constant_jumps, ma_jumps, save_positions)
 
-    # handle constant jumps
+    # handle constant jumps using function wrappers
     if constant_jumps != nothing
-        if length(constant_jumps) < TUPLE_TO_FWRAPPER_CUTOFF
-            rates,affects! = getRatesAffectsAsTuples(constant_jumps)
-        else
-            rates,affects! = getRatesAffectsAsFWrappers(u,p,t,constant_jumps)
-        end
+        rates, affects! = get_jump_info_fwrappers(u,p,t,constant_jumps)
     else
-        rates    = ()
-        affects! = ()
+        rates    = []
+        affects! = []
     end
     
-    # current jump rates, includes constant jumps and mass action jumps
-    cur_rates = Vector{typeof(t)}(length(aggregator.scaled_rates))
-    #cur_rates = Vector{typeof(t)}(length(aggregator.scaled_rates) + length(rates))
+    # current jump rates, just mass action jumps for now
+    cur_rates = Vector{typeof(t)}(length(ma_jumps.scaled_rates))
 
-    # get first jump time and jump
-    sum_rate,next_jump = time_to_next_jump_ma(u,p,t,aggregator,cur_rates)
-
-    DirectMAJumpAggregation(next_jump, end_time, cur_rates, sum_rate, aggregator,
-                            rates, affects!, save_positions)
+    DirectMAJumpAggregation(zero(t), 0, end_time, cur_rates, zero(t), 
+                            ma_jumps, rates, affects!, save_positions)
 end
 
-DiscreteCallback(c::DirectMAJumpAggregation) = DiscreteCallback(c,c,initialize=c,save_positions=c.save_positions)
+DiscreteCallback(c::DirectMAJumpAggregation) = DiscreteCallback(c, c, initialize=c, save_positions=c.save_positions)

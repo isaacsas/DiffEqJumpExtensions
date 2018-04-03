@@ -61,7 +61,7 @@ end
 @inbounds function scalerates!(unscaled_rates, stochmat::Vector{Vector{Pair{T,T}}}) where T
     for i in eachindex(unscaled_rates)
         coef = one(T)
-        for specstoch in stochmat[i]
+        for specstoch in stochmat[i]            
             coef *= factorial(specstoch[2])
         end
         unscaled_rates[i] /= coef

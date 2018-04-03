@@ -43,12 +43,14 @@ mutable struct MassActionJump{T,S}
 
   # rates are assumed to have units of per time, but not be scaled for multiplicity of a reactant
   # that is, for a bimolecular reaction 2X -> ... with rate constant k, the scaled rate is k/2
-  function MassActionJump(unscaled_rates, rs, ns)
+  function MassActionJump{T,S}(unscaled_rates::T, rs::S, ns::S) where {T,S}
     sr = copy(unscaled_rates)
     scalerates!(sr, rs)
     new(sr, rs, ns)
   end
 end
+MassActionJump(usr::T, rs::S, ns::S) where {T,S} = MassActionJump{T,S}(usr, rs, ns)
+
 
 struct JumpSet{T1,T2,T3,T4} <: AbstractJump
   variable_jumps::T1
