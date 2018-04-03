@@ -36,20 +36,20 @@ RegularJump(rate,c,dc;mark_dist = nothing,constant_c = false) =
             RegularJump(rate,c,dc,mark_dist,constant_c)
 
 
-mutable struct MassActionJump{T,S}
+struct MassActionJump{T,S}
   scaled_rates::T
   reactant_stoch::S
   net_stoch::S
 
-  # rates are assumed to have units of per time, but not be scaled for multiplicity of a reactant
-  # that is, for a bimolecular reaction 2X -> ... with rate constant k, the scaled rate is k/2
-  function MassActionJump{T,S}(unscaled_rates::T, rs::S, ns::S) where {T,S}
-    sr = copy(unscaled_rates)
-    scalerates!(sr, rs)
+  function MassActionJump{T,S}(rates::T, rs::S, ns::S, scale_rates::Bool) where {T,S}
+    sr = copy(rates)
+    if scale_rates && length(sr) > 0
+      scalerates!(sr, rs)
+    end
     new(sr, rs, ns)
   end
 end
-MassActionJump(usr::T, rs::S, ns::S) where {T,S} = MassActionJump{T,S}(usr, rs, ns)
+MassActionJump(usr::T, rs::S, ns::S; scale_rates = true ) where {T,S} = MassActionJump{T,S}(usr, rs, ns, scale_rates)
 
 
 struct JumpSet{T1,T2,T3,T4} <: AbstractJump
