@@ -4,7 +4,7 @@ using Base.Test
 
 doprint = true
 
-function A_to_B_mean(N)
+function A_to_B_mean(N, method)
     Nsims    = 32000
     tf       = .1
     baserate = .1
@@ -29,7 +29,7 @@ function A_to_B_mean(N)
     jumps = ((jump for jump in jumpvec)...)
     jset  = DiffEqJumpExtensions.JumpSet((), jumps, nothing, nothing)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = DiffEqJumpExtensions.JumpProblem(prob, DiffEqJumpExtensions.DirectFunWrappers(), jset; save_positions=(false,false))
+    jump_prob = DiffEqJumpExtensions.JumpProblem(prob, method, jset; save_positions=(false,false))
 
     Asamp = zeros(Int64,Nsims)
     for i in 1:Nsims
@@ -45,7 +45,7 @@ function A_to_B_mean(N)
 
 end
 
-function A_to_B_mean_ma(N)
+function A_to_B_mean_ma(N, method)
     Nsims    = 32000
     tf       = .1
     baserate = .1
@@ -66,7 +66,44 @@ function A_to_B_mean_ma(N)
     majumps   = DiffEqJumpExtensions.MassActionJump(rates, reactstoch, netstoch)
     jset      = DiffEqJumpExtensions.JumpSet((), (), nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = DiffEqJumpExtensions.JumpProblem(prob, DiffEqJumpExtensions.DirectMassAction(), jset; save_positions=(false,false))
+    jump_prob = DiffEqJumpExtensions.JumpProblem(prob, method, jset; save_positions=(false,false))
+
+    Asamp = zeros(Int64,Nsims)
+    for i in 1:Nsims
+        sol = DiffEqJumpExtensions.solve(jump_prob, DiffEqJumpExtensions.SSAStepper())
+        Asamp[i] = sol[1,end]
+    end
+
+    if doprint
+        println("samp mean: ", mean(Asamp), ", act mean = ", exactmean(tf))
+    end
+
+    @test abs(mean(Asamp) - exactmean(tf)) < 1.
+
+end
+
+function A_to_B_mean_ma(N, method)
+    Nsims    = 32000
+    tf       = .1
+    baserate = .1
+    A0       = 100
+
+    rates = ones(Float64, N) * baserate;
+    cumsum!(rates, rates)
+    exactmean = (t) -> A0*exp(-sum(rates) * t)
+
+    reactstoch = Vector{Vector{Pair{Int64,Int64}}}();
+    netstoch   = Vector{Vector{Pair{Int64,Int64}}}();
+    for i = 1:N
+        push!(reactstoch,[1 => 1])
+        push!(netstoch,[1 => -1, 2=>1])
+    end
+
+
+    majumps   = DiffEqJumpExtensions.MassActionJump(rates, reactstoch, netstoch)
+    jset      = DiffEqJumpExtensions.JumpSet((), (), nothing, majumps)
+    prob      = DiscreteProblem([A0,0], (0.0,tf))
+    jump_prob = DiffEqJumpExtensions.JumpProblem(prob, method, jset; save_positions=(false,false))
 
     Asamp = zeros(Int64,Nsims)
     for i in 1:Nsims
@@ -84,11 +121,13 @@ end
 
 
 
-# tuples
-A_to_B_mean(5)
-
 # function wrappers
-A_to_B_mean(15)
+method = DiffEqJumpExtensions.DirectFunWrappers()
+A_to_B_mean(15, method)
 
 # mass action
-A_to_B_mean_ma(15)
+method = DiffEqJumpExtensions.DirectMassAction()
+A_to_B_mean_ma(15, method)
+
+# hybrid
+A_to_B_mean_hybrid(15, method)

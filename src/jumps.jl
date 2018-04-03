@@ -94,9 +94,6 @@ massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump) = error("Onl
 ##### helper methods for unpacking rates and affects! from constant jumps #####
 using FunctionWrappers
 
-# when to switch aggregators from tuples for rates/affects to FunctionWrappers
-const TUPLE_TO_FWRAPPER_CUTOFF = 10
-
 function get_jump_info_tuples(constant_jumps)
     rates    = ((c.rate for c in constant_jumps)...)
     affects! = ((c.affect! for c in constant_jumps)...)
