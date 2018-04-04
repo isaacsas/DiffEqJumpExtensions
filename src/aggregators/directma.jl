@@ -52,7 +52,6 @@ function aggregate(aggregator::DirectMassAction, u, p, t, end_time,
     # current jump rates, allows mass action rates and constant jumps
     cur_rates = Vector{typeof(t)}(length(ma_jumps.scaled_rates) + length(rates))
 
-    # setup the Jump Aggregation struct
     DirectMAJumpAggregation(zero(t), 0, end_time, cur_rates, zero(t), 
                             ma_jumps, rates, affects!, save_positions, rng)
 end
@@ -74,12 +73,10 @@ function execute_jumps!(p::DirectMAJumpAggregation, integrator, u, params, t)
 end
 
 # calculate the next jump / jump time
-function generate_jumps!(p::DirectMAJumpAggregation, integrator, u, params, t)    
-    # next jump time
+function generate_jumps!(p::DirectMAJumpAggregation, integrator, u, params, t)        
     p.sum_rate, ttnj = time_to_next_jump_ma(p, u, params, t)
     @fastmath p.next_jump_time = t + ttnj    
 
-    # next jump 
     rn = rand(p.rng) * p.sum_rate
     @inbounds p.next_jump = searchsortedfirst(p.cur_rates, rn) 
 end
