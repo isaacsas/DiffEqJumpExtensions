@@ -3,5 +3,5 @@ using Base.Test
 
 # write your own tests here
 tic()
-@time @testset "Functionwrapper tests" begin include("functwrapper_tests.jl") end
+@time @testset "Linear reaction tests" begin include("linearreaction_test.jl") end
 toc()
