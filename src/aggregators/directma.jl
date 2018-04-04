@@ -35,7 +35,7 @@ function (p::DirectMAJumpAggregation)(dj, u, t, integrator) # initialize
 end
 
 
-############################# Required Functions #############################
+######################## Required Functions to fill in ########################
 
 # creating the JumpAggregation structure
 function aggregate(aggregator::DirectMassAction, u, p, t, end_time,
@@ -49,11 +49,17 @@ function aggregate(aggregator::DirectMassAction, u, p, t, end_time,
         affects! = []
     end
 
+    # mass action jumps
+    majumps = ma_jumps
+    if majumps == nothing
+        majumps = MassActionJump([],[],[])
+    end
+
     # current jump rates, allows mass action rates and constant jumps
-    cur_rates = Vector{typeof(t)}(length(ma_jumps.scaled_rates) + length(rates))
+    cur_rates = Vector{typeof(t)}(length(majumps.scaled_rates) + length(rates))
 
     DirectMAJumpAggregation(zero(t), 0, end_time, cur_rates, zero(t), 
-                            ma_jumps, rates, affects!, save_positions, rng)
+                            majumps, rates, affects!, save_positions, rng)
 end
 
 # set up a new simulation and calculate the first jump / jump time

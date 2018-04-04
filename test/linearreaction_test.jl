@@ -2,14 +2,51 @@
 using DiffEqBase
 import DiffEqJump, DiffEqJumpExtensions
 using Base.Test
+using BenchmarkTools
 
-doprint  = true
-Nsims    = 32000
-tf       = .1
-baserate = .1
-A0       = 100
-exactmean = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
+doprint     = false
+dobenchmark = true
+Nrxs        = 16
+Nsims       = 32000
+tf          = .1
+baserate    = .1
+A0          = 100
+exactmean   = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
 
+
+function A_to_B_mean_orig(N, method)
+    rates = ones(Float64, N) * baserate;
+    cumsum!(rates, rates)    
+
+    # jump reactions
+    jumpvec = []
+    for i in 1:N
+        ratefunc = (u,p,t) -> rates[i] * u[1]
+        affect!  = function (integrator)
+            integrator.u[1] -= 1
+            integrator.u[2] += 1
+        end
+        push!(jumpvec, DiffEqJumpExtensions.ConstantRateJump(ratefunc, affect!))
+    end
+
+    # convert jumpvec to tuple to send to JumpProblem...
+    jumps     = ((jump for jump in jumpvec)...)
+    jset      = DiffEqJump.JumpSet((), jumps, nothing)
+    prob      = DiscreteProblem([A0,0], (0.0,tf))
+    jump_prob = DiffEqJump.JumpProblem(prob, method, jset; save_positions=(false,false))
+
+    Asamp = zeros(Int64,Nsims)
+    for i in 1:Nsims
+        sol = DiffEqJump.solve(jump_prob, DiffEqJump.SSAStepper())
+        Asamp[i] = sol[1,end]
+    end
+
+    if doprint
+        println("samp mean: ", mean(Asamp), ", act mean = ", exactmean(tf, rates))
+    end
+
+    @test abs(mean(Asamp) - exactmean(tf, rates)) < 1.
+end
 
 function A_to_B_mean(N, method)
     rates = ones(Float64, N) * baserate;
@@ -120,14 +157,25 @@ function A_to_B_mean_hybrid(N, method)
 end
 
 
+# tuples
+method = DiffEqJump.Direct()
+A_to_B_mean_orig(Nrxs, method)
 
 # function wrappers
-method = DiffEqJumpExtensions.DirectFunWrappers()
-A_to_B_mean(16, method)
+method = DiffEqJumpExtensions.DirectMassAction()
+A_to_B_mean(Nrxs, method)
 
 # mass action
-method = DiffEqJumpExtensions.DirectMassAction()
-A_to_B_mean_ma(16, method)
+A_to_B_mean_ma(Nrxs, method)
 
 # hybrid
-A_to_B_mean_hybrid(16, method)
+A_to_B_mean_hybrid(Nrxs, method)
+
+if dobenchmark
+    method = DiffEqJump.Direct()
+    @btime A_to_B_mean_orig(Nrxs, method)
+    method = DiffEqJumpExtensions.DirectMassAction()
+    @btime A_to_B_mean(Nrxs, method)
+    @btime A_to_B_mean_ma(Nrxs, method)
+    @btime A_to_B_mean_hybrid(Nrxs, method)
+end
