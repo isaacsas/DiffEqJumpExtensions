@@ -36,7 +36,7 @@ RegularJump(rate,c,dc;mark_dist = nothing,constant_c = false) =
             RegularJump(rate,c,dc,mark_dist,constant_c)
 
 
-struct MassActionJump{T,S}
+struct MassActionJump{T,S} <: AbstractJump
   scaled_rates::T
   reactant_stoch::S
   net_stoch::S
