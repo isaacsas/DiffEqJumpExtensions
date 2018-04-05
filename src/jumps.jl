@@ -43,7 +43,7 @@ struct MassActionJump{T,S} <: AbstractJump
 
   function MassActionJump{T,S}(rates::T, rs::S, ns::S, scale_rates::Bool) where {T,S}
     sr = copy(rates)
-    if scale_rates && length(sr) > 0
+    if scale_rates && !isempty(sr) 
       scalerates!(sr, rs)
     end
     new(sr, rs, ns)
@@ -78,7 +78,7 @@ JumpSet(jumps::AbstractJump...) = JumpSet(split_jumps((), (), nothing, nothing, 
 @inline split_jumps(vj, cj, rj, maj, j::JumpSet, args...) = split_jumps((vj...,j.variable_jumps...), 
                                                                         (cj..., j.constant_jumps...), 
                                                                         regular_jump_combine(rj,j.regular_jump), 
-                                                                        massaction_jump_combine(maj,j.massaction_jumps), args...)
+                                                                        massaction_jump_combine(maj,j.massaction_jump), args...)
 
 regular_jump_combine(rj1::RegularJump,rj2::Void) = rj1
 regular_jump_combine(rj1::Void,rj2::RegularJump) = rj2
