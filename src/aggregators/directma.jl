@@ -1,4 +1,3 @@
-
 mutable struct DirectMAJumpAggregation{T,S,F1,F2,RNG} <: AbstractSSAJumpAggregator
     next_jump::Int         
     next_jump_time::T
@@ -55,7 +54,7 @@ function initialize!(p::DirectMAJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::DirectMAJumpAggregation, integrator, u, params, t)
+@inline function execute_jumps!(p::DirectMAJumpAggregation, integrator, u, params, t)
     num_ma_rates = length(p.ma_jumps.scaled_rates)
     if p.next_jump <= num_ma_rates
         @inbounds executerx!(u, p.ma_jumps.net_stoch[p.next_jump])
@@ -99,7 +98,8 @@ function build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!,
 end
 
 
-@fastmath function time_to_next_jump_ma(p::DirectMAJumpAggregation{T,S,F1,F2,RNG}, u, params, t) where {T,S,F1 <: AbstractArray,F2,RNG}
+@fastmath function time_to_next_jump_ma(p::DirectMAJumpAggregation{T,S,F1,F2,RNG}, u, params, t) 
+                                        where {T,S,F1 <: AbstractArray,F2 <: AbstractArray,RNG}
     prev_rate = zero(t)
     new_rate  = zero(t)
     cur_rates = p.cur_rates
@@ -114,9 +114,10 @@ end
     end
 
     # constant jump rates
-    idx += 1
+    idx  += 1
+    rates = p.rates
     @inbounds for i in 1:length(p.rates)
-        new_rate        = p.rates[i](u, params, t)
+        new_rate        = rates[i](u, params, t)
         cur_rates[idx]  = new_rate + prev_rate
         prev_rate       = cur_rates[idx]
         idx            += 1
