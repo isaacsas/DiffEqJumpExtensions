@@ -1,15 +1,15 @@
 
-mutable struct DirectMAJumpAggregation{T,S,F1,F2,V} <: AbstractSSAJumpAggregator
-    next_jump_time::T         # required field for SSAs, stores time of next jump
-    next_jump::Int64          # required field for SSAs, stores index of next jump
-    end_time::T               # required field for SSAs, stores time to stop simulation
-    cur_rates::Vector{T}      # mass action rates followed by constant_jump rates
+mutable struct DirectMAJumpAggregation{T,S,F1,F2,RNG} <: AbstractSSAJumpAggregator
+    next_jump::Int         
+    next_jump_time::T
+    end_time::T      
+    cur_rates::Vector{T}
     sum_rate::T
     ma_jumps::S
     rates::F1
     affects!::F2
-    save_positions::Tuple{Bool,Bool} # required field for SSAs, determines saving of output
-    rng::V                    # required field for SSAs, stores random number generator
+    save_positions::Tuple{Bool,Bool}
+    rng::RNG
 end
 
 ########### The following routines should be templates for all SSAs ###########
@@ -30,7 +30,7 @@ end
 # setting up a new simulation
 function (p::DirectMAJumpAggregation)(dj, u, t, integrator) # initialize
     initialize!(p, integrator, u, integrator.p, t)
-    register_next_jump_time!(integrator, p, integrator.t)
+    register_next_jump_time!(integrator, p, t)
     nothing
 end
 
@@ -38,33 +38,34 @@ end
 ######################## Required Functions to fill in ########################
 
 # creating the JumpAggregation structure
-function aggregate(aggregator::DirectMassAction, u, p, t, end_time,
-    constant_jumps, ma_jumps, save_positions; rng = Base.Random.GLOBAL_RNG)
+function aggregate(aggregator::DirectMassAction, u, p, t, end_time, 
+                   constant_jumps, ma_jumps, save_positions, rng)
 
     # handle constant jumps using function wrappers
-    if constant_jumps != nothing
-        rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
-    else
-        rates    = []
-        affects! = []
-    end
+    rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     # mass action jumps
     majumps = ma_jumps
     if majumps == nothing
-        majumps = MassActionJump([],[],[])
+        majumps = MassActionJump(Vector{typeof(t)}(),
+                                 Vector{Vector{Pair{Int,eltype(u)}}}(),
+                                 Vector{Vector{Pair{Int,eltype(u)}}}() )
     end
 
     # current jump rates, allows mass action rates and constant jumps
     cur_rates = Vector{typeof(t)}(length(majumps.scaled_rates) + length(rates))
 
-    DirectMAJumpAggregation(zero(t), 0, end_time, cur_rates, zero(t), 
+    sum_rate       = zero(typeof(t))
+    next_jump      = 0
+    next_jump_time = typemax(typeof(t))
+    DirectMAJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate, 
                             majumps, rates, affects!, save_positions, rng)
 end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::DirectMAJumpAggregation, integrator, u, params, t)
-    generate_jumps!(p, integrator, u, integrator.p, t)    
+    generate_jumps!(p, integrator, u, params, t)    
+    nothing
 end
 
 # execute one jump, changing the system state
@@ -76,15 +77,15 @@ function execute_jumps!(p::DirectMAJumpAggregation, integrator, u, params, t)
         idx = p.next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)
     end
+    nothing
 end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectMAJumpAggregation, integrator, u, params, t)        
     p.sum_rate, ttnj = time_to_next_jump_ma(p, u, params, t)
     @fastmath p.next_jump_time = t + ttnj    
-
-    rn = rand(p.rng) * p.sum_rate
-    @inbounds p.next_jump = searchsortedfirst(p.cur_rates, rn) 
+    @inbounds p.next_jump = searchsortedfirst(p.cur_rates, rand(p.rng) * p.sum_rate) 
+    nothing
 end
 
 

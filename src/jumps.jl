@@ -95,17 +95,27 @@ massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump) = error("Onl
 using FunctionWrappers
 
 function get_jump_info_tuples(constant_jumps)
+  if (constant_jumps != nothing) && !isempty(constant_jumps)
     rates    = ((c.rate for c in constant_jumps)...)
     affects! = ((c.affect! for c in constant_jumps)...)
-  
-    return rates, affects!
+  else
+    rates    = ()
+    affects! = ()
   end
   
-  function get_jump_info_fwrappers(u, p, t, constant_jumps)
+  return rates, affects!
+end
+  
+function get_jump_info_fwrappers(u, p, t, constant_jumps)
+  if (constant_jumps != nothing) && !isempty(constant_jumps)
     RateWrapper   = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
     rates         = [RateWrapper(c.rate) for c in constant_jumps]
     AffectWrapper = FunctionWrappers.FunctionWrapper{Void,Tuple{Any}}
     affects!      = [AffectWrapper(x->(c.affect!(x);nothing)) for c in constant_jumps]
-  
-    return rates, affects!
-  end
+  else
+    rates    = Vector{FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}}()
+    affects! = Vector{FunctionWrappers.FunctionWrapper{Void,Tuple{Any}}}()
+  end  
+
+  return rates, affects!
+end

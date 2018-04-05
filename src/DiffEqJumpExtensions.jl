@@ -12,7 +12,7 @@ include("problem.jl")
 include("aggregators/aggregators.jl")
 include("aggregators/directfwrap.jl")
 include("aggregators/directma.jl")
-include("SSA_Stepper.jl")
+include("SSA_stepper.jl")
 
 export MassActionJump
 

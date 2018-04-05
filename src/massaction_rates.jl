@@ -34,7 +34,7 @@ end
 # below stochiometry for a given reaction is a vector of pairs mapping species 
 # id to stochiometric coefficient
 @inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst,
-                                        stochmat::AbstractVector{Pair{T,T}}) where T
+                                        stochmat::AbstractVector{Pair{T,T}})::typeof(rateconst) where T
     val = one(T)
 
     for specstoch in stochmat
