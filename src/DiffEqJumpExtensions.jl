@@ -1,6 +1,6 @@
 module DiffEqJumpExtensions
 
-using DiffEqBase, Compat, Requires
+using DiffEqBase, Compat, Requires, RandomNumbers
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import DiffEqJump: AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem

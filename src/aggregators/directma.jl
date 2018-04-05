@@ -35,31 +35,17 @@ function (p::DirectMAJumpAggregation)(dj, u, t, integrator) # initialize
 end
 
 
-######################## Required Functions to fill in ########################
+############################# Required Functions #############################
 
 # creating the JumpAggregation structure
 function aggregate(aggregator::DirectMassAction, u, p, t, end_time, 
-                   constant_jumps, ma_jumps, save_positions, rng)
+                    constant_jumps, ma_jumps, save_positions, rng)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-    # mass action jumps
-    majumps = ma_jumps
-    if majumps == nothing
-        majumps = MassActionJump(Vector{typeof(t)}(),
-                                 Vector{Vector{Pair{Int,eltype(u)}}}(),
-                                 Vector{Vector{Pair{Int,eltype(u)}}}() )
-    end
-
-    # current jump rates, allows mass action rates and constant jumps
-    cur_rates = Vector{typeof(t)}(length(majumps.scaled_rates) + length(rates))
-
-    sum_rate       = zero(typeof(t))
-    next_jump      = 0
-    next_jump_time = typemax(typeof(t))
-    DirectMAJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate, 
-                            majumps, rates, affects!, save_positions, rng)
+    build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
+                            save_positions, rng)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -91,7 +77,29 @@ end
 
 ######################## SSA specific helper routines ########################
 
-@fastmath function time_to_next_jump_ma(p::DirectMAJumpAggregation, u, params, t)
+function build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
+                                save_positions, rng)
+
+    # mass action jumps
+    majumps = ma_jumps
+    if majumps == nothing
+        majumps = MassActionJump(Vector{typeof(t)}(),
+                                 Vector{Vector{Pair{Int,eltype(u)}}}(),
+                                 Vector{Vector{Pair{Int,eltype(u)}}}() )
+    end
+
+    # current jump rates, allows mass action rates and constant jumps
+    cur_rates = Vector{typeof(t)}(length(majumps.scaled_rates) + length(rates))
+
+    sum_rate = zero(typeof(t))
+    next_jump = 0
+    next_jump_time = typemax(typeof(t))
+    DirectMAJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate, 
+                            majumps, rates, affects!, save_positions, rng)
+end
+
+
+@fastmath function time_to_next_jump_ma(p::DirectMAJumpAggregation{T,S,F1,F2,RNG}, u, params, t) where {T,S,F1 <: AbstractArray,F2,RNG}
     prev_rate = zero(t)
     new_rate  = zero(t)
     cur_rates = p.cur_rates

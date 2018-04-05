@@ -5,7 +5,7 @@ using Base.Test
 using BenchmarkTools
 
 doprint     = true
-dobenchmark = true
+dobenchmark = false
 dotest      = true
 Nrxs        = 16
 Nsims       = 32000
