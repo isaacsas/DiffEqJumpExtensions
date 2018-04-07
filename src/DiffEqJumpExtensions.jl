@@ -4,18 +4,14 @@ using DiffEqBase, Compat, Requires
 using DiffEqJump
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
+import DiffEqJump: aggregate, get_jump_info_tuples, get_jump_info_fwrappers, executerx!, 
+                   evalrxrate, fill_cur_rates, register_next_jump_time!
 import Base: size, getindex, setindex!, length, similar, indices, show
 
-include("massaction_rates.jl")
-include("jumps.jl")
+#include("massaction_rates.jl")
 include("aggregators/aggregators.jl")
-include("aggregators/direct.jl")
-include("aggregators/directma.jl")
+include("aggregators/frm.jl")
 
-
-export JumpProblem
-
-export DirectMA
-
+export FRM, FRMFW, FRMJumpAggregation, aggregate
 
 end # module
