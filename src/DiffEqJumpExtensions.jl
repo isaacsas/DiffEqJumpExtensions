@@ -10,8 +10,7 @@ import Base: size, getindex, setindex!, length, similar, indices, show
 
 #include("massaction_rates.jl")
 include("aggregators/aggregators.jl")
-include("aggregators/frm.jl")
 
-export FRM, FRMFW, FRMJumpAggregation, aggregate
+#export aggregate
 
 end # module

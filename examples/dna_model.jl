@@ -1,31 +1,69 @@
-using DiffEqBase, OrdinaryDiffEq, DiffEqJump, DiffEqBiological
-using BenchmarkTools
-using Plots; 
+using DiffEqBase, DiffEqJump
 
-doPlot      = false
-doBenchMark = true 
+using Plots; 
+doPlot = true
+using BenchmarkTools
+doBenchMark = false
+
+Nsims = 8000
+
+# average number of proteins in a simulation
+function runSSAs(jump_prob)
+    Psamp = zeros(Int, Nsims)
+    for i in 1:Nsims
+        sol = solve(jump_prob, SSAStepper())
+        Psamp[i] = sol[3,end]
+    end
+    mean(Psamp)
+end
+
 
 # DNA repression model DiffEqBiological
-rs = @reaction_network dtype begin
-    k1, DNA --> mRNA + DNA
-    k2, mRNA --> mRNA + P
-    k3, mRNA --> 0
-    k4, P --> 0
-    k5, DNA + P --> DNAR
-    k6, DNAR --> DNA + P
-end k1 k2 k3 k4 k5 k6
+# using DiffEqBiological
+# rs = @reaction_network dtype begin
+#     k1, DNA --> mRNA + DNA
+#     k2, mRNA --> mRNA + P
+#     k3, mRNA --> 0
+#     k4, P --> 0
+#     k5, DNA + P --> DNAR
+#     k6, DNAR --> DNA + P
+# end k1 k2 k3 k4 k5 k6
+
+
+# model using mass action jumps
+# ids: DNA=1, mRNA = 2, P = 3, DNAR = 4
+reactstoch = 
+[ 
+    [1 => 1],
+    [2 => 1],
+    [2 => 1],
+    [3 => 1],
+    [1 => 1, 3 => 1],
+    [4 => 1] 
+]
+netstoch = 
+[ 
+    [2 => 1],
+    [3 => 1],
+    [2 => -1],
+    [3 => -1],
+    [1 => -1, 3 => -1, 4 => 1],
+    [1 => 1, 3 => 1, 4 => -1] 
+]
+rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
+majumps = MassActionJumps(rates, reactstoch, netstoch)
+
 tf     = 20000.0
-params = (.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.)
-prob   = DiscreteProblem([1,0,0,0], (0.0, tf), params)
+prob   = DiscreteProblem([1,0,0,0], (0.0, tf), rates)
 
 # SSAs to test
-methods = (Direct(),)
+SSAalgs = (Direct(), DirectFW(), FRM(), FRMFW())
 
 # plotting one full trajectory
 if doPlot
     plothand = plot()
-    for method in methods
-        jump_prob = JumpProblem(prob, method, rs)
+    for alg in SSAalgs
+        jump_prob = JumpProblem(prob, alg, majumps)
         sol = solve(jump_prob, SSAStepper())
         plot!(plothand, sol.t, sol[3,:])
     end
@@ -34,30 +72,13 @@ end
 
 # benchmark performance
 if doBenchMark
-    # number of save times to look at
-    num_save_vec = 25000 #10.^(3:6)
-
     # exact methods
-    for method in methods
+    for alg in SSAalgs
         println("Solving with method: ", typeof(method), ", using SSAStepper")
         jump_prob = JumpProblem(prob, method, rs)
         @btime solve($jump_prob, SSAStepper())
     end
     println()
-
-    # methods that save at fixed times
-    for num_save in num_save_vec
-        dtsave = tf / num_save
-
-        for method in methods    
-            println("Solving with method: ", typeof(method), ", using SSAStepper and ", num_save, " points")
-            jump_prob = JumpProblem(prob, method, rs, save_positions=(false,false))
-            @btime solve($jump_prob, SSAStepper(), saveat=$dtsave)                        
-        end 
-        
-        println()
-    end
-
 end
 
 # write your own tests here
