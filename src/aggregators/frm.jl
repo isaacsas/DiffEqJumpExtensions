@@ -10,6 +10,8 @@ mutable struct FRMJumpAggregation{T,S,F1,F2,RNG} <: AbstractSSAJumpAggregator
   save_positions::Tuple{Bool,Bool}
   rng::RNG
 end
+FRMJumpAggregation(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng; kwargs...) = FRMJumpAggregation(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng)
+
 
 ########### The following routines should be templates for all SSAs ###########
 
@@ -42,8 +44,8 @@ function aggregate(aggregator::FRM, u, p, t, end_time, constant_jumps,
   # handle constant jumps using tuples
   rates, affects! = get_jump_info_tuples(constant_jumps)
 
-  build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
-                          save_positions, rng)
+  build_jump_aggregation(FRMJumpAggregation, u, p, t, end_time, ma_jumps, rates, affects!, 
+                          save_positions, rng; kwargs...)
 end
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
@@ -53,8 +55,8 @@ function aggregate(aggregator::FRMFW, u, p, t, end_time, constant_jumps,
   # handle constant jumps using function wrappers
   rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-  build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
-                          save_positions, rng)
+  build_jump_aggregation(FRMJumpAggregation, u, p, t, end_time, ma_jumps, rates, affects!, 
+                          save_positions, rng; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -94,28 +96,7 @@ end
 
 ######################## SSA specific helper routines ########################
 
-function build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
-                                save_positions, rng)
-
-  # mass action jumps
-  majumps = ma_jumps
-  if majumps == nothing
-    majumps = MassActionJump(Vector{typeof(t)}(),
-                             Vector{Vector{Pair{Int,eltype(u)}}}(),
-                             Vector{Vector{Pair{Int,eltype(u)}}}() )
-  end
-
-  # current jump rates, allows mass action rates and constant jumps
-  cur_rates = Vector{typeof(t)}(length(majumps.scaled_rates) + length(rates))
-
-  sum_rate = zero(typeof(t))
-  next_jump = 0
-  next_jump_time = typemax(typeof(t))
-  FRMJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate, 
-                        majumps, rates, affects!, save_positions, rng)
-end
-
-
+# mass action jumps
 @fastmath function next_ma_jump(p::FRMJumpAggregation, u, params, t)
     ttnj      = typemax(typeof(t))    
     nextrx    = zero(Int)
