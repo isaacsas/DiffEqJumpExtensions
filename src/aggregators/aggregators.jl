@@ -1,1 +1,2 @@
 
+struct SortingDirect <: AbstractAggregatorAlgorithm end
