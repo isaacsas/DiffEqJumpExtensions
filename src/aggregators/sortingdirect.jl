@@ -19,12 +19,12 @@ mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJ
   end
 
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, 
-                            maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, 
-                            rng::RNG; dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG} 
+                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, 
+                                      rng::RNG; dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG} 
     
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph == nothing
-        if isempty(maj.rates) || !isempty(rs)
+        if isempty(maj.scaled_rates) || !isempty(rs)
             error("To run a simulation with any ConstantRateJumps a dependency graph must be supplied.")
         else
             dg = make_dependency_graph(length(maj.scaled_rates), maj)
@@ -80,7 +80,8 @@ function initialize!(p::SortingDirectJumpAggregation, integrator, u, params, t)
 end
   
 # execute one jump, changing the system state
-@inline function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)    
+    # execute jump
     num_ma_rates = length(p.ma_jumps.scaled_rates)
     if p.next_jump <= num_ma_rates
         @inbounds executerx!(u, p.ma_jumps.net_stoch[p.next_jump])
@@ -88,6 +89,18 @@ end
         idx = p.next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)
     end
+
+    # update search order
+    jso   = p.jump_search_order
+    jsidx = p.jump_search_idx
+    if jsidx != 1
+        @inbounds tmp           = jso[jsidx]
+        @inbounds jso[jsidx]   = jso[jsidx-1]
+        @inbounds jso[jsidx-1] = tmp
+    end
+
+    # update current jump rates
+    update_dependent_rates!(p, u, params, t)
     nothing
 end
   
@@ -99,6 +112,27 @@ end
   
 
 ######################## SSA specific helper routines ########################
+
+# recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
+function update_dependent_rates!(p, u, params, t)
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]    
+    num_majumps = length(p.ma_jumps.scaled_rates)
+    cur_rates   = p.cur_rates
+    sum_rate    = p.sum_rate
+    majumps     = p.ma_jumps
+    @inbounds for rx in dep_rxs
+        sum_rate -= cur_rates[rx]
+        if rx <= num_majumps
+            cur_rates[rx] = evalrxrate(u, majumps.scaled_rates[rx], majumps.reactant_stoch[rx])
+        else
+            cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
+        end
+        sum_rate += cur_rates[rx]        
+    end
+
+    p.sum_rate = sum_rate
+end
+
 
 function fill_rates_and_sum!(p, u, params, t)
     sum_rate = zero(typeof(p.sum_rate))
@@ -112,13 +146,13 @@ function fill_rates_and_sum!(p, u, params, t)
     end
 
     # constant rates (IGNORED)
-    # rates = p.rates
-    # idx   = length(majumps.scaled_rates) + 1
-    # @inbounds for i in eachindex(rates)
-    #     cur_rates[idx] = rates[i](u, params, t)
-    #     sum_rate += cur_rates[idx]
-    #     idx += 1
-    # end
+    rates = p.rates
+    idx   = length(majumps.scaled_rates) + 1
+    @inbounds for i in eachindex(rates)
+        cur_rates[idx] = rates[i](u, params, t)
+        sum_rate += cur_rates[idx]
+        idx += 1
+    end
 
     p.sum_rate = sum_rate
 end
@@ -130,17 +164,18 @@ end
     ttnj = randexp(p.rng) / p.sum_rate
 
     # next jump type
-    numjumps = length(p.cur_rates)
-    jso      = p.jump_search_order
-    rn       = p.sum_rate * rand(p.rng)
-    for idx = 1:numjumps
-        rn = rn - cur_rates[jso[idx]]
+    cur_rates = p.cur_rates
+    numjumps  = length(cur_rates)
+    jso       = p.jump_search_order
+    rn        = p.sum_rate * rand(p.rng)
+    @inbounds for idx = 1:numjumps
+        rn -= cur_rates[jso[idx]]
         if rn < zero(rn)
             p.jump_search_idx = idx            
             break
         end
     end
-    p.next_jump = jso[idx]
+    @inbounds p.next_jump = jso[p.jump_search_idx]
 
     return ttnj
 end

@@ -1,19 +1,19 @@
-using DiffEqBase, DiffEqJump
+using DiffEqBase, DiffEqJump, DiffEqJumpExtensions
 using Base.Test
 
-# using Plots; plotlyjs()
-doplot = false
-# using BenchmarkTools
-# dobenchmark = false
+using Plots; plotlyjs()
+doplot = true
+using BenchmarkTools
+dobenchmark = true
 
-dotestmean   = true
+dotestmean   = false
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(),) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
 
-Nsims        = 8000
-tf           = 1000.0
+Nsims        = 80000
+tf           = 10000.0
 u0           = [1,0,0,0]
 expected_avg = 5.926553750000000e+02
 reltol       = .01
@@ -61,7 +61,7 @@ netstoch =
     [1 => -1, 3 => -1, 4 => 1],
     [1 => 1, 3 => 1, 4 => -1] 
 ]
-rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
+rates = [30, 30*(20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
 
@@ -72,8 +72,8 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 if doplot
     plothand = plot(reuse=false)
     for alg in SSAalgs
-        jump_prob = JumpProblem(prob, alg, majumps)
-        sol = solve(jump_prob, SSAStepper())
+        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false))
+        sol = solve(jump_prob, SSAStepper(), saveat=(tf/1000.))
         plot!(plothand, sol.t, sol[3,:], seriestype=:steppost)
     end
     display(plothand)
@@ -101,13 +101,13 @@ end
 
 
 # benchmark performance
-# if dobenchmark
-#     # exact methods
-#     for alg in SSAalgs
-#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps)
-#         @btime solve($jump_prob, SSAStepper())
-#     end
-#     println()
-# end
+if dobenchmark
+    # exact methods
+    for alg in SSAalgs
+        println("Solving with method: ", typeof(alg), ", using SSAStepper")
+        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false))
+        @btime solve($jump_prob, SSAStepper(), saveat=(tf/1000.))
+    end
+    println()
+end
 

@@ -8,9 +8,10 @@ import DiffEqJump: aggregate, get_jump_info_tuples, get_jump_info_fwrappers, exe
                    evalrxrate, fill_cur_rates, register_next_jump_time!, build_jump_aggregation
 import Base: size, getindex, setindex!, length, similar, indices, show
 
-#include("massaction_rates.jl")
+include("network_utils.jl")
 include("aggregators/aggregators.jl")
+include("aggregators/sortingdirect.jl")
 
-#export aggregate
+export SortingDirect, aggregate
 
 end # module
