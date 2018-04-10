@@ -61,7 +61,7 @@ netstoch =
     [1 => -1, 3 => -1, 4 => 1],
     [1 => 1, 3 => 1, 4 => -1] 
 ]
-rates = [30, 30*(20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
+rates = [50, 50*(20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
 
