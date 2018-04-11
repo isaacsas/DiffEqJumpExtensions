@@ -10,7 +10,8 @@ dotestmean   = false
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
+#SSAalgs = (SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (Direct(),)
 
 Nsims        = 80000
 tf           = 100000.0
@@ -45,21 +46,21 @@ end
 # ids: DNA=1, mRNA = 2, P = 3, DNAR = 4
 reactstoch =
 [
-    [1 => 1],
-    [2 => 1],
-    [2 => 1],
-    [3 => 1],
-    [1 => 1, 3 => 1],
-    [4 => 1]
+    [1 1]',
+    [2 1]',
+    [2 1]',
+    [3 1]',
+    [1 1; 3 1]',
+    [4 1]'
 ]
 netstoch =
 [
-    [2 => 1],
-    [3 => 1],
-    [2 => -1],
-    [3 => -1],
-    [1 => -1, 3 => -1, 4 => 1],
-    [1 => 1, 3 => 1, 4 => -1]
+    [2 1]',
+    [3 1]',
+    [2 -1]',
+    [3 -1]',
+    [1 -1; 3 -1; 4 1]',
+    [1 1; 3 1; 4 -1]'
 ]
 rates = [50, 50*(20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
 #rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]

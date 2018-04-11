@@ -94,7 +94,7 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
     jso   = p.jump_search_order
     jsidx = p.jump_search_idx
     if jsidx != 1
-        @inbounds tmp           = jso[jsidx]
+        @inbounds tmp          = jso[jsidx]
         @inbounds jso[jsidx]   = jso[jsidx-1]
         @inbounds jso[jsidx-1] = tmp
     end
@@ -106,7 +106,7 @@ end
   
 # calculate the next jump / jump time
 function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
-    @fastmath p.next_jump_time = t + calc_next_jump(p, u, params, t)
+    @fastmath p.next_jump_time = t + calc_next_jump!(p, u, params, t)
     nothing
 end
   
@@ -158,7 +158,7 @@ function fill_rates_and_sum!(p, u, params, t)
 end
 
 # searches down the rate list for the next reaction 
-@fastmath function calc_next_jump(p, u, params, t)
+@fastmath function calc_next_jump!(p, u, params, t)
     
     # time to next jump
     ttnj = randexp(p.rng) / p.sum_rate
