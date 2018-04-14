@@ -12,20 +12,20 @@ mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJ
     dep_gr::DEPGR
     jump_search_order::Vector{Int}
     jump_search_idx::Int
-    SortingDirectJumpAggregation{T,S,F1,F2,RNG}(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, 
-                                                rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG, 
-                                                dep_gr::DEPGR, jtoidx::Vector{Int}) where {T,S,F1,F2,RNG,DEPGR} = 
+    SortingDirectJumpAggregation{T,S,F1,F2,RNG}(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
+                                                rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG,
+                                                dep_gr::DEPGR, jtoidx::Vector{Int}) where {T,S,F1,F2,RNG,DEPGR} =
       new{T,S,F1,F2,RNG,DEPGR}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dep_gr, jtoidx, zero(Int))
   end
 
-function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, 
-                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, 
-                                      rng::RNG; dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG} 
-    
+function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
+                                      rng::RNG; dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG}
+
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph == nothing
         if isempty(maj.scaled_rates) || !isempty(rs)
-            error("To run a simulation with any ConstantRateJumps a dependency graph must be supplied.")
+            error("To use ConstantRateJumps with the SortingDirect algorithm a dependency graph must be supplied.")
         else
             dg = make_dependency_graph(length(maj.scaled_rates), maj)
         end
@@ -42,33 +42,33 @@ end
   ########### The following routines should be templates for all SSAs ###########
 
 # condition for jump to occur
-@inline function (p::SortingDirectJumpAggregation)(u, t, integrator) 
+@inline function (p::SortingDirectJumpAggregation)(u, t, integrator)
     p.next_jump_time == t
 end
-  
+
 # executing jump at the next jump time
-function (p::SortingDirectJumpAggregation)(integrator) 
+function (p::SortingDirectJumpAggregation)(integrator)
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
     nothing
 end
-  
+
 # setting up a new simulation
 function (p::SortingDirectJumpAggregation)(dj, u, t, integrator) # initialize
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, t)
     nothing
 end
-  
+
   # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps, 
+function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-    build_jump_aggregation(SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps, 
+    build_jump_aggregation(SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps,
                            rates, affects!, save_positions, rng; kwargs...)
 end
 
@@ -78,9 +78,9 @@ function initialize!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
-  
+
 # execute one jump, changing the system state
-function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)    
+function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     # execute jump
     num_ma_rates = length(p.ma_jumps.scaled_rates)
     if p.next_jump <= num_ma_rates
@@ -103,19 +103,19 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
     update_dependent_rates!(p, u, params, t)
     nothing
 end
-  
+
 # calculate the next jump / jump time
 function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     @fastmath p.next_jump_time = t + calc_next_jump!(p, u, params, t)
     nothing
 end
-  
+
 
 ######################## SSA specific helper routines ########################
 
 # recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
 function update_dependent_rates!(p, u, params, t)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]    
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
     num_majumps = length(p.ma_jumps.scaled_rates)
     cur_rates   = p.cur_rates
     sum_rate    = p.sum_rate
@@ -127,7 +127,7 @@ function update_dependent_rates!(p, u, params, t)
         else
             cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
         end
-        sum_rate += cur_rates[rx]        
+        sum_rate += cur_rates[rx]
     end
 
     p.sum_rate = sum_rate
@@ -157,9 +157,9 @@ function fill_rates_and_sum!(p, u, params, t)
     p.sum_rate = sum_rate
 end
 
-# searches down the rate list for the next reaction 
+# searches down the rate list for the next reaction
 @fastmath function calc_next_jump!(p, u, params, t)
-    
+
     # time to next jump
     ttnj = randexp(p.rng) / p.sum_rate
 
@@ -171,7 +171,7 @@ end
     @inbounds for idx = 1:numjumps
         rn -= cur_rates[jso[idx]]
         if rn < zero(rn)
-            p.jump_search_idx = idx            
+            p.jump_search_idx = idx
             break
         end
     end
