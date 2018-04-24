@@ -4,7 +4,7 @@ using Base.Test
 using Plots; plotlyjs()
 doplot = true
 using BenchmarkTools
-dobenchmark = true
+dobenchmark = false
 
 dotestmean   = false
 doprintmeans = false
@@ -71,11 +71,11 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 
 # plotting one full trajectory
 if doplot
-    plothand = plot(reuse=false)
+    plothand = plot(reuse=false, legend=:bottomleft)
     for alg in SSAalgs
         jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false))
         sol = solve(jump_prob, SSAStepper(), saveat=(tf/1000.))
-        plot!(plothand, sol.t, sol[3,:], seriestype=:steppost)
+        plot!(plothand, sol.t, sol[3,:], seriestype=:steppost, label=string(typeof(alg)))
     end
     display(plothand)
 end

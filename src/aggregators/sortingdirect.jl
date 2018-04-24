@@ -24,10 +24,10 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph == nothing
-        if isempty(maj.scaled_rates) || !isempty(rs)
+        if (get_num_majumps(maj) == 0) || !isempty(rs)
             error("To use ConstantRateJumps with the SortingDirect algorithm a dependency graph must be supplied.")
         else
-            dg = make_dependency_graph(length(maj.scaled_rates), maj)
+            dg = make_dependency_graph(get_num_majumps(maj), maj)
         end
     else
         dg = dep_graph
@@ -82,9 +82,9 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     # execute jump
-    num_ma_rates = length(p.ma_jumps.scaled_rates)
+    num_ma_rates = get_num_majumps(p.ma_jumps)
     if p.next_jump <= num_ma_rates
-        @inbounds executerx!(u, p.ma_jumps.net_stoch[p.next_jump])
+        @inbounds executerx!(u, p.next_jump, p.ma_jumps)
     else
         idx = p.next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)
@@ -116,16 +116,16 @@ end
 # recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
 function update_dependent_rates!(p, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    num_majumps = length(p.ma_jumps.scaled_rates)
+    num_majumps = get_num_majumps(p.ma_jumps)
     cur_rates   = p.cur_rates
     sum_rate    = p.sum_rate
     majumps     = p.ma_jumps
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
         if rx <= num_majumps
-            cur_rates[rx] = evalrxrate(u, majumps.scaled_rates[rx], majumps.reactant_stoch[rx])
+            @inbounds cur_rates[rx] = evalrxrate(u, rx, majumps)
         else
-            cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
+            @inbounds cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
         end
         sum_rate += cur_rates[rx]
     end
@@ -140,14 +140,14 @@ function fill_rates_and_sum!(p, u, params, t)
     # mass action jumps
     majumps   = p.ma_jumps
     cur_rates = p.cur_rates
-    @inbounds for i in eachindex(majumps.scaled_rates)
-        cur_rates[i] = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
+    @inbounds for i in 1:get_num_majumps(majumps)
+        cur_rates[i] = evalrxrate(u, i, majumps)
         sum_rate    += cur_rates[i]
     end
 
     # constant rates (IGNORED)
     rates = p.rates
-    idx   = length(majumps.scaled_rates) + 1
+    idx   = get_num_majumps(majumps) + 1
     @inbounds for i in eachindex(rates)
         cur_rates[idx] = rates[i](u, params, t)
         sum_rate += cur_rates[idx]

@@ -13,8 +13,10 @@ doprintmeans = false
 #SSAalgs = (SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
 SSAalgs = (Direct(),)
 
-Nsims        = 80000
-tf           = 100000.0
+# Nsims        = 80000
+# tf           = 100000.0
+Nsims        = 100
+tf           = 10000.0
 u0           = [1,0,0,0]
 expected_avg = 5.926553750000000e+02
 reltol       = .01
@@ -92,9 +94,9 @@ if dotestmean
             println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ", relerr)
         end
 
-        # if dobenchmark
-        #     @btime (runSSAs($jump_prob);)
-        # end
+        if dobenchmark
+            @btime (runSSAs($jump_prob);)
+        end
 
 
         @test abs(means[i] - expected_avg) < reltol*expected_avg
@@ -109,6 +111,7 @@ if dobenchmark
         println("Solving with method: ", typeof(alg), ", using SSAStepper")
         jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false))
         @btime solve($jump_prob, SSAStepper(), saveat=(tf/1000.))
+        @btime (runSSAs($jump_prob);)
     end
     println()
 end
