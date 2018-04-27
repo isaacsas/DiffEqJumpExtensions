@@ -159,10 +159,7 @@ end
 
 # searches down the rate list for the next reaction
 @fastmath function calc_next_jump!(p, u, params, t)
-
-    # time to next jump
-    ttnj = randexp(p.rng) / p.sum_rate
-
+    
     # next jump type
     cur_rates = p.cur_rates
     numjumps  = length(cur_rates)
@@ -177,5 +174,7 @@ end
     end
     @inbounds p.next_jump = jso[p.jump_search_idx]
 
-    return ttnj
+    # return time to next jump
+    randexp(p.rng) / p.sum_rate
+
 end
