@@ -6,14 +6,16 @@ doplot = true
 using BenchmarkTools
 dobenchmark = false
 
-dotestmean   = false
-doprintmeans = false
+dotestmean   = true
+doprintmeans = true
 
 # SSAs to test
-SSAalgs = (SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (SortingDirect(),Direct(),NRM()) #, DirectFW(), FRM(), FRMFW())
 
-Nsims        = 80000
-tf           = 100000.0
+Nsims        = 8000
+tf           = 1000.0
+# Nsims        = 80000
+# tf           = 100000.0
 u0           = [1,0,0,0]
 expected_avg = 5.926553750000000e+02
 reltol       = .01
@@ -61,8 +63,8 @@ netstoch =
     [1 => -1, 3 => -1, 4 => 1],
     [1 => 1, 3 => 1, 4 => -1]
 ]
-rates = [50, 50*(20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
-#rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
+#rates = [50, 50*(20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
+rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
 

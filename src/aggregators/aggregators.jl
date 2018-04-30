@@ -1,2 +1,2 @@
 
-struct SortingDirect <: AbstractAggregatorAlgorithm end
+struct NRM <: AbstractAggregatorAlgorithm end
