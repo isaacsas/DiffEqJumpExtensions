@@ -1,6 +1,6 @@
 module DiffEqJumpExtensions
 
-using DiffEqBase, Compat, Requires, DataStructures
+using DiffEqBase, Compat, Requires
 using DiffEqJump
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
@@ -10,6 +10,7 @@ import DiffEqJump: aggregate, get_jump_info_tuples, get_jump_info_fwrappers, exe
 import Base: size, getindex, setindex!, length, similar, indices, show
 
 include("aggregators/aggregators.jl")
+include("aggregators/priorityqueue.jl")
 include("aggregators/nrm.jl")
 
 export NRM, aggregate

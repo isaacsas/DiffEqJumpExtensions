@@ -4,13 +4,13 @@ using Base.Test
 using Plots; plotlyjs()
 doplot = true
 using BenchmarkTools
-dobenchmark = false
+dobenchmark = true
 
 dotestmean   = true
 doprintmeans = true
 
 # SSAs to test
-SSAalgs = (SortingDirect(),Direct(),NRM()) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (NRM(),SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
 
 Nsims        = 8000
 tf           = 1000.0
@@ -93,9 +93,9 @@ if dotestmean
             println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ", relerr)
         end
 
-        # if dobenchmark
-        #     @btime (runSSAs($jump_prob);)
-        # end
+        if dobenchmark
+            @btime (runSSAs($jump_prob);)
+        end
 
 
         @test abs(means[i] - expected_avg) < reltol*expected_avg

@@ -40,7 +40,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         end
     end
 
-    pq = PriorityQueue{eltype(eltype(dg)),typeof(njt)}()
+    pq = ArrayPQ(Vector{Pair{Int,T}}())
 
     NRMJumpAggregation{T,S,F1,F2,RNG}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, pq)
 end
@@ -121,12 +121,22 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
     num_majumps = get_num_majumps(p.ma_jumps)
     cur_rates   = p.cur_rates
     @inbounds for rx in dep_rxs
+        oldrate = cur_rates[rx]
+
+        # update the jump rate
         if rx <= num_majumps
             @inbounds cur_rates[rx] = evalrxrate(u, rx, p.ma_jumps)
         else
             @inbounds cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)            
         end
-        p.pq[rx] = t + randexp(p.rng) / cur_rates[rx]
+
+        # calculate new jump times for dependent jumps
+        if rx != p.next_jump && oldrate > zero(oldrate)
+            p.pq[rx] = cur_rates[rx] > 0. ? t + oldrate / cur_rates[rx] * (p.pq[rx] - t) : typemax(t)
+        else 
+            p.pq[rx] = t + randexp(p.rng) / cur_rates[rx]
+        end
+        
     end
     nothing
 end
@@ -138,9 +148,10 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
     # mass action jumps
     majumps   = p.ma_jumps
     cur_rates = p.cur_rates
+    pqdata    = Vector{Pair{Int,typeof(t)}}(length(cur_rates))
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps)
-        p.pq[i]      = t + randexp(p.rng) / cur_rates[i]
+        pqdata[i]    = i => t + randexp(p.rng) / cur_rates[i]
     end
 
     # constant rates
@@ -148,8 +159,12 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
     idx   = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
         cur_rates[idx] = rate(u, params, t)
-        p.pq[idx]      = t + randexp(p.rng) / cur_rates[idx]
+        pqdata[idx]    = idx => t + randexp(p.rng) / cur_rates[idx]
         idx += 1
     end
+
+    # setup a new indexed priority queue to storing rx times
+    p.pq = ArrayPQ(pqdata)
+
     nothing 
 end
