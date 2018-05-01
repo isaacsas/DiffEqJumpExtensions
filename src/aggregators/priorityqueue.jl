@@ -2,24 +2,7 @@
 
 # optimized version of DataStructure.jl priority queue
 # swapped index from a dict to an array
-# disabled checking for presence of keys when inserting!
-
-
-import Base: <, <=, ==, length, isempty, start, next, done, delete!,
-show, dump, empty!, getindex, setindex!, get, get!,
-in, haskey, keys, merge, copy, cat,
-push!, pop!, insert!,
-union!, delete!, similar, sizehint!,
-isequal, hash,
-map, reverse,
-first, last, eltype, getkey, values, sum,
-merge, merge!, lt, Ordering, ForwardOrdering, Forward,
-ReverseOrdering, Reverse, Lt,
-isless,
-union, intersect, symdiff, setdiff, issubset,
-searchsortedfirst, searchsortedlast, in
-
-import Base.Order: Forward, Ordering, lt
+# disabled checking for presence of keys when inserting
 
 # Binary heap indexing
 heapleft(i::Integer) = i << 1 #2i             # alt: i << 1
@@ -31,9 +14,6 @@ function not_iterator_of_pairs(kv)
                [start, next, done]) ||
            any(x->!isa(x, Union{Tuple,Pair}), kv)
 end
-
-# ArrayPQ
-# -------------
 
 """
     ArrayPQ(K, V, [ord])
@@ -77,17 +57,7 @@ mutable struct ArrayPQ{K,V,O<:Ordering} <: AbstractDict{K,V}
     end
 end
 
-function ArrayPQ(kv::Vector{T}, o::Ordering=Forward) where {K,V,T <: Pair{K,V}}
-    try
-        ArrayPQ{K,V,typeof(o)}(o, kv)
-    catch e
-        if not_iterator_of_pairs(kv)
-            throw(ArgumentError("ArrayPQ(kv): kv needs to be an iterator of tuples or pairs"))
-        else
-            rethrow(e)
-        end
-    end
-end
+ArrayPQ(kv::Vector{T}, o::Ordering=Forward) where {K,V,T <: Pair{K,V}} = ArrayPQ{K,V,typeof(o)}(o, kv)   
 ArrayPQ(kv, o::Ordering=Forward) = ArrayPQ(o, kv)
 
 length(pq::ArrayPQ) = length(pq.xs)
@@ -99,7 +69,7 @@ isempty(pq::ArrayPQ) = isempty(pq.xs)
 Return the lowest priority key from a priority queue without removing that
 key from the queue.
 """
-peek(pq::ArrayPQ) = pq.xs[1]
+peek(pq::ArrayPQ) = (@inbounds return pq.xs[1])
 
 function percolate_down!(pq::ArrayPQ, i::Integer)
     @inbounds x = pq.xs[i]
@@ -156,9 +126,7 @@ end
 
 # Unordered iteration through key value pairs in a ArrayPQ
 start(pq::ArrayPQ) = start(pq.index)
-
 done(pq::ArrayPQ, i) = done(pq.index, i)
-
 function next(pq::ArrayPQ{K,V}, i) where {K,V}
     (k, idx), i = next(pq.index, i)
     return (pq.xs[idx], i)
