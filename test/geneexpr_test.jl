@@ -2,7 +2,7 @@ using DiffEqBase, DiffEqJump, DiffEqJumpExtensions
 using Base.Test
 
 using Plots; plotlyjs()
-doplot = true
+doplot = false
 using BenchmarkTools
 dobenchmark = true
 
@@ -10,7 +10,7 @@ dotestmean   = true
 doprintmeans = true
 
 # SSAs to test
-SSAalgs = (NRM(),SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (NRM(),) #,SortingDirect(),Direct()) #, DirectFW(), FRM(), FRMFW())
 
 Nsims        = 8000
 tf           = 1000.0

@@ -1,13 +1,13 @@
 # This file contains code that was formerly a part of Julia. License is MIT: http://julialang.org/license
 
-# optimized version of DataStructure.jl priority queue
-# swapped index from a dict to an array
-# disabled checking for presence of keys when inserting
+# slightly optimized version of DataStructure.jl priority queue
+# swapped index field from a dict to an array
+# removed checking for presence of keys when inserting
 
 # Binary heap indexing
-heapleft(i::Integer) = i << 1 #2i             # alt: i << 1
-heapright(i::Integer) = (i << 1) + 1 #2i + 1        # alt: (i << 1) + 1
-heapparent(i::Integer) = i >> 1 #div(i, 2)    # alt: i >> 1
+heapleft(i::Int)   = i << 1         #2i 
+heapright(i::Int)  = (i << 1) + 1   #2i + 1
+heapparent(i::Int) = i >> 1         #div(i, 2)
 
 function not_iterator_of_pairs(kv)
     return any(x->isempty(methodswith(typeof(kv), x, true)),
@@ -15,22 +15,6 @@ function not_iterator_of_pairs(kv)
            any(x->!isa(x, Union{Tuple,Pair}), kv)
 end
 
-"""
-    ArrayPQ(K, V, [ord])
-Construct a new [`ArrayPQ`](@ref), with keys of type
-`K` and values/priorites of type `V`.
-If an order is not given, the priority queue is min-ordered using
-the default comparison for `V`.
-A `ArrayPQ` acts like a `Dict`, mapping integer values to their
-priorities.
-```jldoctest
-julia> a = ArrayPQ([2, 4, 5],[2,3,1],Base.Order.Forward)
-ArrayPQ{String,Int64,Base.Order.ForwardOrdering} with 3 entries:
-  5 => 1
-  4 => 3
-  2 => 2
-```
-"""
 mutable struct ArrayPQ{K,V,O<:Ordering} <: AbstractDict{K,V}
     # Binary heap of (element, priority) pairs.
     xs::Vector{Pair{K,V}}
@@ -56,20 +40,12 @@ mutable struct ArrayPQ{K,V,O<:Ordering} <: AbstractDict{K,V}
         pq
     end
 end
-
 ArrayPQ(kv::Vector{T}, o::Ordering=Forward) where {K,V,T <: Pair{K,V}} = ArrayPQ{K,V,typeof(o)}(o, kv)   
 ArrayPQ(kv, o::Ordering=Forward) = ArrayPQ(o, kv)
 
-length(pq::ArrayPQ) = length(pq.xs)
+length(pq::ArrayPQ)  = length(pq.xs)
 isempty(pq::ArrayPQ) = isempty(pq.xs)
-
-
-"""
-    peek(pq)
-Return the lowest priority key from a priority queue without removing that
-key from the queue.
-"""
-peek(pq::ArrayPQ) = (@inbounds return pq.xs[1])
+peek(pq::ArrayPQ)    = (@inbounds return pq.xs[1])
 
 function percolate_down!(pq::ArrayPQ, i::Integer)
     @inbounds x = pq.xs[i]
@@ -86,8 +62,8 @@ function percolate_down!(pq::ArrayPQ, i::Integer)
     end
     @inbounds pq.index[x.first] = i
     @inbounds pq.xs[i] = x
+    nothing
 end
-
 
 function percolate_up!(pq::ArrayPQ, i::Integer)
     @inbounds x = pq.xs[i]
@@ -103,6 +79,7 @@ function percolate_up!(pq::ArrayPQ, i::Integer)
     end
     @inbounds pq.index[x.first] = i
     @inbounds pq.xs[i] = x
+    nothing    
 end
 
 function getindex(pq::ArrayPQ{K,V}, key) where {K,V}
@@ -110,7 +87,7 @@ function getindex(pq::ArrayPQ{K,V}, key) where {K,V}
 end
 
 # Change the priority of an existing element
-# DOES NOT CHECK IF THE ELEMENT IS PRESENT!
+# does not check if the element is present
 function setindex!(pq::ArrayPQ{K, V}, value, key) where {K,V}
     @inbounds i = pq.index[key]
     @inbounds oldvalue = pq.xs[i].second
@@ -122,7 +99,6 @@ function setindex!(pq::ArrayPQ{K, V}, value, key) where {K,V}
     end
     value
 end
-
 
 # Unordered iteration through key value pairs in a ArrayPQ
 start(pq::ArrayPQ) = start(pq.index)

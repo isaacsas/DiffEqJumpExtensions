@@ -12,6 +12,7 @@ import Base.Order: Forward, Ordering, lt
 
 include("aggregators/aggregators.jl")
 include("aggregators/priorityqueue.jl")
+#include("aggregators/simplepq.jl")
 include("aggregators/nrm.jl")
 
 export NRM, aggregate
