@@ -36,7 +36,7 @@ function runSSAs(jump_prob)
 end
 
 # MODEL SETUP
-N = 20
+N = 10
 genenetwork = "@reaction_network gtype begin\n"
 for i in 1:N
     genenetwork *= "\t 10.0, G$(2*i-1) --> G$(2*i-1) + M$(2*i-1)\n"
@@ -68,7 +68,7 @@ if doplot
     for alg in SSAalgs
         jump_prob = JumpProblem(prob, alg, rs, save_positions=(false,false))
         sol = solve(jump_prob, SSAStepper(), saveat=(tf/1000.))
-        plot!(plothand, sol.t, sol[[3,6],:]', seriestype=:steppost, lab=string(alg))
+        plot!(plothand, sol.t, sol[[3,6],:]', lab=string(alg))
     end
     display(plothand)
 end
